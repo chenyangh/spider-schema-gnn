@@ -1,7 +1,7 @@
-allennlp train train_configs/defaults.jsonnet 
--s experiments/test1
---include-package dataset_readers.spider
---include-package models.semantic_parsing.spider_parser
+allennlp train train_configs/defaults.jsonnet \
+-s experiments/test1 \
+--include-package dataset_readers.spider \
+--include-package models.semantic_parsing.spider_parser 
 
 
 allennlp predict experiments/gnn3 dataset/dev.json \
