@@ -113,8 +113,11 @@ def fix_number_value(ex: JsonDict):
     which is good since the evaluator doesn't check for the values. But it also anonymizes numbers that
     should not be anonymized: e.g. LIMIT 3 becomes LIMIT 'value', while the evaluator fails if it is not a number.
     """
-
+    # NOTE from chenyang: this code replace '1', '2', '3' back to query_toks_no_value
     def split_and_keep(s, sep):
+        """
+        Convert 'T1.name' to ['T1', '.', 'name']
+        """
         if not s: return ['']  # consistent with string.split()
 
         # Find replacement character that is not used in string
@@ -267,6 +270,6 @@ def disambiguate_items(db_id: str, query_toks: List[str], tables_file: str, allo
     if not allow_aliases:
         toks = [tok for tok in toks if tok not in ['as', 't1', 't2', 't3', 't4']]
 
-    toks = [f'\'value\'' if tok == '"value"' else tok for tok in toks]
+    toks = [f'\'value\'' if tok == '"value"' else tok for tok in toks] # ???
 
     return toks

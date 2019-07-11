@@ -158,8 +158,10 @@ def scan_alias(toks):
 
 def get_tables_with_alias(schema, toks):
     tables = scan_alias(toks)
+    if len(tables) > 0:
+        t = 1
     for key in schema:
-        assert key not in tables, "Alias {} has the same name in table".format(key)
+        assert key not in tables, "Alias {} has the same name in table".format(key)  # usually not occur
         tables[key] = key
     return tables
 
