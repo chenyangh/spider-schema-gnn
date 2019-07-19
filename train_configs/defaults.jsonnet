@@ -62,7 +62,7 @@ local dataset_path = "dataset/";
   },
   "iterator": {
     "type": "basic",
-    "batch_size" : 15
+    "batch_size" : 16
   },
   "validation_iterator": {
     "type": "basic",
