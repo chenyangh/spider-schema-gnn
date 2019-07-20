@@ -2,7 +2,7 @@ import json
 import shutil
 import sys
 
-from allennlp.commands import main
+from fork_allennlp.commands import main
 
 config_file = "train_configs/defaults.jsonnet"
 

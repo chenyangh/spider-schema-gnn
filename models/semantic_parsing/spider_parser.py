@@ -31,6 +31,12 @@ from state_machines.states.sql_state import SqlState
 from state_machines.transition_functions.attend_past_schema_items_transition import \
     AttendPastSchemaItemsTransitionFunction
 from state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
+from xlnet_model import XLNetForFeatureExtraction, convert_examples_to_features
+from pytorch_transformers import XLNetConfig, XLNetTokenizer
+
+MAX_SEQ_LEN = 128
+xlnet_model_name = 'xlnet-large-cased'
+
 
 
 @Model.register("spider")
@@ -124,6 +130,12 @@ class SpiderParser(Model):
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
 
+        # XLNet
+        self.xlnet_out_dim = 600
+        self.xlnet_config = XLNetConfig.from_pretrained(xlnet_model_name)
+        self.xlnet_tokenizer = XLNetTokenizer.from_pretrained(xlnet_model_name)
+        self.xlnet_model = XLNetForFeatureExtraction(self.xlnet_config)
+        self.xlnet_projection = torch.nn.Linear(self.xlnet_config.hidden_size, self.xlnet_out_dim)
         if decoder_self_attend:
             self._transition_function = AttendPastSchemaItemsTransitionFunction(encoder_output_dim=encoder_output_dim,
                                                                                 action_embedding_dim=action_embedding_dim,
@@ -153,6 +165,37 @@ class SpiderParser(Model):
                                       check_valid=False)
 
         self.debug_parsing = debug_parsing
+
+    def ids_to_str(self, tokens):
+        id_to_str_dict = self.vocab._index_to_token['tokens']
+        return [' '.join(x) for x in [[id_to_str_dict[idx.item()]
+                                       for idx in idxs if idx not in [0, 1]] for idxs in tokens]]
+
+    def xlnet_foroward(self, examples):
+        features = convert_examples_to_features(examples, MAX_SEQ_LEN, self.xlnet_tokenizer,
+                                                cls_token_at_end=True,  # xlnet has a cls token at the end
+                                                cls_token=self.xlnet_tokenizer.cls_token,
+                                                sep_token=self.xlnet_tokenizer.sep_token,
+                                                cls_token_segment_id=2 if True else 1,
+                                                pad_on_left=True,  # pad on the left for xlnet
+                                                pad_token_segment_id=4 if True else 0)
+
+        input_ids_list = []
+        input_mask_list = []
+        segment_ids_list = []
+        for feature in features:
+            input_ids_list.append(feature.input_ids)
+            input_mask_list.append(feature.input_mask)
+            segment_ids_list.append(feature.segment_ids)
+
+        xlnet_input_ids = torch.tensor(input_ids_list).cuda()
+        xlnet_attention_mask = torch.tensor(input_mask_list).cuda()
+        xlnet_token_type_ids = torch.tensor(segment_ids_list).cuda()
+
+        transformer_outputs = self.xlnet_model(input_ids=xlnet_input_ids, attention_mask=xlnet_attention_mask,
+                                               token_type_ids=xlnet_token_type_ids)
+        feature = transformer_outputs[:, -1]
+        return self._dropout(self.xlnet_projection(feature))
 
     @overrides
     def forward(self,  # type: ignore
@@ -330,6 +373,12 @@ class SpiderParser(Model):
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              utterance_mask,
                                                              self._encoder.is_bidirectional())
+
+        # Concat with XLNet
+        xlnet_out = self.xlnet_foroward(self.ids_to_str(utterance['tokens']))
+        # encoder_output_dim += self.xlnet_out_dim
+        final_encoder_output = torch.add(final_encoder_output, xlnet_out)
+
         memory_cell = encoder_outputs.new_zeros(batch_size, encoder_output_dim)
         initial_score = embedded_utterance.data.new_zeros(batch_size)
 
