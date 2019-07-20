@@ -22,17 +22,17 @@ config_file = "train_configs/defaults.jsonnet"
 sys.argv = [
     "allennlp",  # command name, not used by main
     "predict",
-    "experiments/gnn3",
+    "experiments/debug",
     "dataset/dev.json",
     "--predictor", "spider",
     "--use-dataset-reader",
     "--cuda-device", '0',
-    "--output-file", "experiments/gnn3/prediction.sql",
+    "--output-file", "experiments/debug/prediction.sql",
     "--silent",
     "--include-package", "dataset_readers.spider",
     "--include-package", "models.semantic_parsing.spider_parser",
     "--include-package", "predictors.spider_predictor",
-    "--weights-file", "experiments/gnn3/best.th",
+    "--weights-file", "experiments/debug/best.th",
 ]
 
 main()
