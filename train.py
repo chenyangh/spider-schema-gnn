@@ -9,7 +9,7 @@ config_file = "train_configs/defaults.jsonnet"
 # Use overrides to train on CPU.
 overrides = json.dumps({"trainer": {"cuda_device": 0}})
 
-serialization_dir = "experiments/debug"
+serialization_dir = "experiments/debug2"
 
 # Training will fail if the serialization directory already
 # has stuff in it. If you are running the same training loop

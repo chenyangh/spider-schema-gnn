@@ -16,7 +16,7 @@ from allennlp.nn import util, Activation
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarStatelet
 from torch_geometric.data import Data, Batch
-
+from torch.nn import functional as F
 from modules.gated_graph_conv import GatedGraphConv
 from semparse.worlds.evaluate_spider import evaluate
 from state_machines.states.rnn_statelet import RnnStatelet
@@ -36,7 +36,6 @@ from pytorch_transformers import XLNetConfig, XLNetTokenizer
 
 MAX_SEQ_LEN = 128
 xlnet_model_name = 'xlnet-large-cased'
-
 
 
 @Model.register("spider")
@@ -195,7 +194,7 @@ class SpiderParser(Model):
         transformer_outputs = self.xlnet_model(input_ids=xlnet_input_ids, attention_mask=xlnet_attention_mask,
                                                token_type_ids=xlnet_token_type_ids)
         feature = transformer_outputs[:, -1]
-        return self._dropout(self.xlnet_projection(feature))
+        return self._dropout(F.relu(self.xlnet_projection(feature)))
 
     @overrides
     def forward(self,  # type: ignore

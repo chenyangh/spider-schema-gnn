@@ -666,6 +666,10 @@ class Trainer(TrainerBase):
             # the right device.
             model = model.cuda(model_device)
 
+        # freeze XLNet
+        for param in model.xlnet_model.parameters():
+            param.requires_grad = False
+
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
         if "moving_average" in params:
